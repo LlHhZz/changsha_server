@@ -22,6 +22,8 @@ from changshaapp.settings import getinfo, signin, signout, register
 from changshaapp.settings import getinfo2, signin2, signout2, register2
 # Authentication
 from changshaapp.settings import auth_getinfos, auth_upload, auth_edit, getAuthInfoByUsername
+# Declaration
+from changshaapp.settings import declaration_getinfos, declaration_upload, declaration_delete, declaration_edit
 
 from django.views.static import serve
 from django.urls import path, re_path
@@ -44,6 +46,11 @@ urlpatterns = [
     path("auth/upload/", auth_upload, name='auth_upload'),
     path("auth/editinfos/", auth_edit, name='auth_editinfos'),
     path("auth/getCodeByUsername/", getAuthInfoByUsername, name='auth_getCodeByUsername'),
+
+    path("declaration/getinfos/", declaration_getinfos, name='declaration_getinfos'),
+    path("declaration/upload/", declaration_upload, name='declaration_upload'),
+    path("declaration/delete/", declaration_delete, name='declaration_delete'),
+    path("declaration/edit/", declaration_edit, name='declaration_edit'),
 
     re_path(r'media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT})
 ]

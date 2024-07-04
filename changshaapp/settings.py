@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.contrib.auth.models import User
-from changshaapp.models import Participant, Declarant, Authentication
+from changshaapp.models import Participant, Declarant, Authentication, Declaration
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 
@@ -339,6 +339,152 @@ def auth_edit(request):
 
             # 保存更改
             authentication.save()
+
+            return JsonResponse({
+                'result': 'success'
+            })
+    else:
+        return JsonResponse({
+            'result': '请求方法错误'
+        })
+
+# Declaration
+def declaration_getinfos(request):
+    user = request.user
+    # 若用户还未认证，显示登录注册页面
+    if not user.is_authenticated:
+        return JsonResponse({
+            'result': 'failed',
+            'msg': '用户未通过身份验证',
+        })
+    
+    # 取出认证请求信息，返回
+    declaration_requests  = Declaration.objects.all()
+    declaration_infos = []
+    for declaration in declaration_requests:
+        declaration_infos.append({
+            'id': declaration.id,
+            'username': declaration.username,
+            'declarationArea': declaration.declarationArea,
+            'declarationElectricity': declaration.declarationElectricity,
+            'FMCapacity': declaration.FMCapacity,
+            'electricityPrice': declaration.electricityPrice,
+            'mileagePrice': declaration.mileagePrice,
+            'capacityPrice': declaration.capacityPrice,
+            'reviewState': declaration.reviewState,
+        })
+    return JsonResponse({
+        'result': 'success',
+        'declarationInfos': declaration_infos,
+    })
+
+def declaration_upload(request):
+    if request.method == 'POST':
+        data = request.POST
+        username = data.get('username', "").strip()
+        declarationArea = data.get('declarationArea', "").strip()
+        declarationElectricity = data.get('declarationElectricity', "").strip()
+        FMCapacity = data.get('FMCapacity', "").strip()
+        electricityPrice = data.get('electricityPrice', "").strip()
+        mileagePrice = data.get('mileagePrice', "").strip()
+        capacityPrice = data.get('capacityPrice', "").strip()
+        reviewState = data.get('reviewState', "").strip()
+
+        print(username)
+        print(declarationArea)
+        print(declarationElectricity)
+
+        try:
+            declaration = Declaration.objects.create(
+                username=username,
+                declarationArea=declarationArea,
+                declarationElectricity=declarationElectricity,
+                FMCapacity=FMCapacity,
+                electricityPrice=electricityPrice,
+                mileagePrice=mileagePrice,
+                capacityPrice=capacityPrice,
+                reviewState=reviewState
+            )
+        except Exception as e:
+            return JsonResponse({
+                'result': '申报提交失败',
+                'error': str(e)
+            }, status=400)
+
+        return JsonResponse({
+            'result': 'success',
+        })
+    else:
+        return JsonResponse({
+            'result': '请求方法错误'
+        })
+
+# 根据id删除对应的申报表项
+def declaration_delete(request):
+    if request.method == 'POST':
+        data = request.POST
+        id = data.get('id', None)
+        print(id)
+
+        if(id):
+            try:
+                declaration = Declaration.objects.get(id=id)
+                declaration.delete()
+            except Exception as e:
+                return JsonResponse({
+                    'result': '申报删除失败',
+                    'error': str(e)
+                }, status=400)
+        else:
+            return JsonResponse({
+                'result': '必须提供申报ID'
+            }, status=400)
+
+        return JsonResponse({
+            'result': 'success',
+        })
+    else:
+        return JsonResponse({
+            'result': '请求方法错误'
+        })
+
+# 更新当前申报项的状态
+def declaration_edit(request):
+    if request.method == 'POST':
+        data = request.POST
+        id = data.get('id')
+        declarationState = data.get('declarationState', "").strip()
+
+        print(declarationState)
+
+        if declarationState == '已通过':
+            try:
+                declaration = Declaration.objects.get(id=id)
+                # 更新Declaration实例的字段
+                declaration.reviewState = declarationState;
+
+                # 保存更改
+                declaration.save()
+            except Declaration.DoesNotExist:
+                return JsonResponse({
+                    'result': '未找到相应的申报信息'
+                })
+
+            return JsonResponse({
+                'result': 'success'
+            })
+        elif declarationState == '已拒绝':
+            try:
+                declaration = Declaration.objects.get(id=id)
+                # 更新Declaration实例的字段
+                declaration.reviewState = declarationState;
+
+                # 保存更改
+                declaration.save()
+            except Declaration.DoesNotExist:
+                return JsonResponse({
+                    'result': '未找到相应的申报信息'
+                })
 
             return JsonResponse({
                 'result': 'success'

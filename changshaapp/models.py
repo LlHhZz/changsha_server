@@ -35,7 +35,25 @@ class Authentication(models.Model):
     username = models.CharField(max_length=255)
     # 发起认证请求用户上传的认证资料存储在后端的地址（只有上传成功后才新增信息）
     file = models.URLField(max_length=255, blank=True)
-    # 待审核 已通过（发放认证码） 已拒绝
+    # 认证状态：待审核 已通过（发放认证码） 已拒绝
     authState = models.CharField(max_length=255)
     # 所发放的认证码
     authCode = models.CharField(max_length=255)
+
+class Declaration(models.Model):
+    # 发起认证请求用户的用户名
+    username = models.CharField(max_length=255)
+    # 申报区域（望城区等）
+    declarationArea = models.CharField(max_length=255)
+    # 申报电量
+    declarationElectricity = models.FloatField()
+    # 调频容量
+    FMCapacity = models.FloatField()
+    # 电量价格
+    electricityPrice = models.FloatField()
+    # 里程价格
+    mileagePrice = models.FloatField()
+    # 容量价格
+    capacityPrice = models.FloatField()
+    # 审核状态（待审核，通过，未通过）
+    reviewState = models.CharField(max_length=255)
