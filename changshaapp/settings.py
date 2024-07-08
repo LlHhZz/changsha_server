@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.contrib.auth.models import User
-from changshaapp.models import Participant, Declarant, Authentication, Declaration
+from changshaapp.models import Participant, Declarant, Authentication, Declaration, AuthenticationExtractionStatus
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 
@@ -27,11 +27,15 @@ def signin(request):
     # login
     if request.method == 'POST':
         data = request.POST
-        print(data)
-        username = data.get('username')
-        password = data.get('password')
-        print(username)
-        print(password)
+        
+        username = data.get('username').strip()
+        password = data.get('password').strip()
+        
+        if not username or not password:
+            return JsonResponse({
+                'result': '用户名或密码不能为空',
+            })
+
         # 根据管理员输入的username和password进行身份验证
         user = authenticate(username=username, password=password)
         if not user:
@@ -119,17 +123,31 @@ def getAuthInfoByUsername(request):
     # 申报人通过username获取当前的认证状态以及认证码
     if request.method == 'POST':
         data = request.POST
-        username = data.get('username')
+        username = data.get('username').strip()
 
-        authentication = Authentication.objects.filter(username=username, authState='已通过')[0];
-        if authentication:
+        if not username:
             return JsonResponse({
-                'result': 'success',
-                'authState': '已通过',
-                'authCode': authentication.authCode
+                'result': '用户名不能为空',
             })
+
+        authentication = Authentication.objects.filter(username=username, authState='已通过');
+        authenticationExtractionStatus = AuthenticationExtractionStatus.objects.filter(username=username)[0];
+        if authentication:
+            if authenticationExtractionStatus.extractionStatus == '待提取':
+                authenticationExtractionStatus.extractionStatus = '已提取'
+                authenticationExtractionStatus.save()
+
+                return JsonResponse({
+                    'result': 'success',
+                    'authState': '已通过',
+                    'authCode': authentication[0].authCode
+                })
+            else:
+                return JsonResponse({
+                    'result': '认证码已被提取'
+                })
         else:
-            authentication = authentication.objects.filter(username=username, authState='已拒绝')[0];
+            authentication = Authentication.objects.filter(username=username, authState='已拒绝');
             if authentication:
                 return JsonResponse({
                     'result': 'success',
@@ -228,7 +246,7 @@ def auth_getinfos(request):
         })
     
     # 取出认证请求信息，返回
-    auth_requests  = Authentication.objects.all()
+    auth_requests  = Authentication.objects.all().order_by('-id')
     auth_infos = []
     for auth in auth_requests:
         auth_infos.append({
@@ -261,6 +279,14 @@ def auth_upload(request):
             uploaded_file_url = 'http://8.148.13.44:443' + fs.url(filename)
 
             Authentication.objects.create(username=form.cleaned_data['username'], file=uploaded_file_url, authState='待审核', authCode='')
+            
+            authenticationExtractionStatus = AuthenticationExtractionStatus.objects.filter(username = form.cleaned_data['username'])
+            if not authenticationExtractionStatus:
+                AuthenticationExtractionStatus.objects.create(username = form.cleaned_data['username'], extractionStatus = '待提取')
+            else:
+                authenticationExtractionStatus = AuthenticationExtractionStatus.objects.get(username = form.cleaned_data['username'])
+                authenticationExtractionStatus.extractionStatus = '待提取'
+                authenticationExtractionStatus.save()
 
             # 返回文件 URL
             return JsonResponse({
@@ -359,7 +385,7 @@ def declaration_getinfos(request):
         })
     
     # 取出认证请求信息，返回
-    declaration_requests  = Declaration.objects.all()
+    declaration_requests  = Declaration.objects.all().order_by('-id')
     declaration_infos = []
     for declaration in declaration_requests:
         declaration_infos.append({

@@ -57,3 +57,10 @@ class Declaration(models.Model):
     capacityPrice = models.FloatField()
     # 审核状态（待审核，通过，未通过）
     reviewState = models.CharField(max_length=255)
+
+class AuthenticationExtractionStatus(models.Model):
+    # 认证用户名
+    username = models.CharField(max_length=255)
+    # 提取状态：待提取 已提取（约束：只允许根据用户名提取一次）
+    # 再重新通过用户名和认证材料申报后，重新发放认证码后，允许再次提取新的认证码
+    extractionStatus = models.CharField(max_length=255)
