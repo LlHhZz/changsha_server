@@ -23,7 +23,7 @@ from changshaapp.settings import getinfo2, signin2, signout2, register2
 # Authentication
 from changshaapp.settings import auth_getinfos, auth_upload, auth_edit, getAuthInfoByUsername
 # Declaration
-from changshaapp.settings import declaration_getinfos, declaration_upload, declaration_delete, declaration_edit
+from changshaapp.settings import declaration_getinfos, declaration_getinfos_by_username, declaration_upload, declaration_delete, declaration_edit
 
 from django.views.static import serve
 from django.urls import path, re_path
@@ -48,6 +48,7 @@ urlpatterns = [
     path("auth/getCodeByUsername/", getAuthInfoByUsername, name='auth_getCodeByUsername'),
 
     path("declaration/getinfos/", declaration_getinfos, name='declaration_getinfos'),
+    path("declaration/getinfos/byUsername/", declaration_getinfos_by_username, name='declaration_getinfos_by_username'),
     path("declaration/upload/", declaration_upload, name='declaration_upload'),
     path("declaration/delete/", declaration_delete, name='declaration_delete'),
     path("declaration/edit/", declaration_edit, name='declaration_edit'),

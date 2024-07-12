@@ -404,6 +404,35 @@ def declaration_getinfos(request):
         'declarationInfos': declaration_infos,
     })
 
+def declaration_getinfos_by_username(request):
+    user = request.user
+    # 若用户还未认证，显示登录注册页面
+    if not user.is_authenticated:
+        return JsonResponse({
+            'result': 'failed',
+            'msg': '用户未通过身份验证',
+        })
+    
+    # 取出认证请求信息，返回
+    declaration_requests  = Declaration.objects.filter(username=user.username).order_by('-id')
+    declaration_infos = []
+    for declaration in declaration_requests:
+        declaration_infos.append({
+            'id': declaration.id,
+            'username': declaration.username,
+            'declarationArea': declaration.declarationArea,
+            'declarationElectricity': declaration.declarationElectricity,
+            'FMCapacity': declaration.FMCapacity,
+            'electricityPrice': declaration.electricityPrice,
+            'mileagePrice': declaration.mileagePrice,
+            'capacityPrice': declaration.capacityPrice,
+            'reviewState': declaration.reviewState,
+        })
+    return JsonResponse({
+        'result': 'success',
+        'declarationInfos': declaration_infos,
+    })
+
 def declaration_upload(request):
     if request.method == 'POST':
         data = request.POST
