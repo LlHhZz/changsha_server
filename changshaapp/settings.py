@@ -8,11 +8,11 @@ from django.contrib.auth import authenticate, login, logout
 def getinfo(request):
     user = request.user
     # 若管理员还未认证，显示登录注册页面
-    if not user.is_authenticated:
-        return JsonResponse({
-            'result': 'failed',
-            'msg': '管理员未通过身份验证',
-        })
+    # if not user.is_authenticated:
+    #     return JsonResponse({
+    #         'result': 'failed',
+    #         'msg': '管理员未通过身份验证',
+    #     })
     
     # 取出管理员信息，返回
     actor = Participant.objects.all()[0]
@@ -27,10 +27,11 @@ def signin(request):
     # login
     if request.method == 'POST':
         data = request.POST
-        
+        print(data)
         username = data.get('username').strip()
         password = data.get('password').strip()
-        
+        print(username)
+        print(password)
         if not username or not password:
             return JsonResponse({
                 'result': '用户名或密码不能为空',
@@ -46,6 +47,7 @@ def signin(request):
         if Participant.objects.filter(user=user).exists():
             # 验证成功，完成登录
             login(request, user)
+            print("success")
             return JsonResponse({
                 'result': 'success',
             })
@@ -104,11 +106,11 @@ def register(request):
 def getinfo2(request):
     user = request.user
     # 若用户还未认证，显示登录注册页面
-    if not user.is_authenticated:
-        return JsonResponse({
-            'result': 'failed',
-            'msg': '用户未通过身份验证',
-        })
+    # if not user.is_authenticated:
+    #     return JsonResponse({
+    #         'result': 'failed',
+    #         'msg': '用户未通过身份验证',
+    #     })
     
     # 取出用户信息，返回
     actor = Declarant.objects.all()[0]
@@ -182,6 +184,7 @@ def signin2(request):
             })
         # 验证成功，完成登录
         login(request, user)
+        print("success")
         return JsonResponse({
             'result': 'success',
         })
@@ -239,11 +242,11 @@ def register2(request):
 def auth_getinfos(request):
     user = request.user
     # 若用户还未认证，显示登录注册页面
-    if not user.is_authenticated:
-        return JsonResponse({
-            'result': 'failed',
-            'msg': '用户未通过身份验证',
-        })
+    # if not user.is_authenticated:
+    #     return JsonResponse({
+    #         'result': 'failed',
+    #         'msg': '用户未通过身份验证',
+    #     })
     
     # 取出认证请求信息，返回
     auth_requests  = Authentication.objects.all().order_by('-id')
@@ -276,7 +279,7 @@ def auth_upload(request):
             file = form.cleaned_data['file']
             fs = FileSystemStorage()
             filename = fs.save(form.cleaned_data['username'] + '_' + file.name, file)
-            uploaded_file_url = 'http://8.148.13.44:443' + fs.url(filename)
+            uploaded_file_url = 'http://8.148.13.44:8000' + fs.url(filename)
 
             Authentication.objects.create(username=form.cleaned_data['username'], file=uploaded_file_url, authState='待审核', authCode='')
             
@@ -378,11 +381,11 @@ def auth_edit(request):
 def declaration_getinfos(request):
     user = request.user
     # 若用户还未认证，显示登录注册页面
-    if not user.is_authenticated:
-        return JsonResponse({
-            'result': 'failed',
-            'msg': '用户未通过身份验证',
-        })
+    # if not user.is_authenticated:
+    #     return JsonResponse({
+    #         'result': 'failed',
+    #         'msg': '用户未通过身份验证',
+    #     })
     
     # 取出认证请求信息，返回
     declaration_requests  = Declaration.objects.all().order_by('-id')
@@ -405,33 +408,41 @@ def declaration_getinfos(request):
     })
 
 def declaration_getinfos_by_username(request):
-    user = request.user
-    # 若用户还未认证，显示登录注册页面
-    if not user.is_authenticated:
+    if request.method == 'POST':
+        user = request.user
+        # 若用户还未认证，显示登录注册页面
+        # if not user.is_authenticated:
+        #     return JsonResponse({
+        #         'result': 'failed',
+        #         'msg': '用户未通过身份验证',
+        #     })
+
+        data = request.POST
+        username = data.get('username', "").strip()
+        
+        # 取出认证请求信息，返回
+        declaration_requests  = Declaration.objects.filter(username=username).order_by('-id')
+        declaration_infos = []
+        for declaration in declaration_requests:
+            declaration_infos.append({
+                'id': declaration.id,
+                'username': declaration.username,
+                'declarationArea': declaration.declarationArea,
+                'declarationElectricity': declaration.declarationElectricity,
+                'FMCapacity': declaration.FMCapacity,
+                'electricityPrice': declaration.electricityPrice,
+                'mileagePrice': declaration.mileagePrice,
+                'capacityPrice': declaration.capacityPrice,
+                'reviewState': declaration.reviewState,
+            })
         return JsonResponse({
-            'result': 'failed',
-            'msg': '用户未通过身份验证',
+            'result': 'success',
+            'declarationInfos': declaration_infos,
         })
-    
-    # 取出认证请求信息，返回
-    declaration_requests  = Declaration.objects.filter(username=user.username).order_by('-id')
-    declaration_infos = []
-    for declaration in declaration_requests:
-        declaration_infos.append({
-            'id': declaration.id,
-            'username': declaration.username,
-            'declarationArea': declaration.declarationArea,
-            'declarationElectricity': declaration.declarationElectricity,
-            'FMCapacity': declaration.FMCapacity,
-            'electricityPrice': declaration.electricityPrice,
-            'mileagePrice': declaration.mileagePrice,
-            'capacityPrice': declaration.capacityPrice,
-            'reviewState': declaration.reviewState,
+    else:
+        return JsonResponse({
+            'result': '请求方法错误'
         })
-    return JsonResponse({
-        'result': 'success',
-        'declarationInfos': declaration_infos,
-    })
 
 def declaration_upload(request):
     if request.method == 'POST':
