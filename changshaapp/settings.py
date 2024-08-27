@@ -1,8 +1,9 @@
 from django.http import JsonResponse
 from django.contrib.auth.models import User
-from changshaapp.models import Participant, Declarant, Authentication, Declaration, AuthenticationExtractionStatus
+from changshaapp.models import Participant, Declarant, Authentication, Declaration, AuthenticationExtractionStatus, Data
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
+import pandas as pd
 
 # Manager 管理员
 def getinfo(request):
@@ -554,6 +555,110 @@ def declaration_edit(request):
 
             return JsonResponse({
                 'result': 'success'
+            })
+    else:
+        return JsonResponse({
+            'result': '请求方法错误'
+        })
+
+from changshaapp.processModel import data_process
+
+def data_upload(request):
+    if request.method == 'POST':
+        form = UploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            # 文件存储到 MEDIA_ROOT 目录下
+            file = form.cleaned_data['file']
+            fs = FileSystemStorage()
+            filename = fs.save(form.cleaned_data['username'] + '_' + file.name, file)
+            uploaded_file_url = '/home/ecs-user/changsha' + fs.url(filename)
+            # print(uploaded_file_url)
+
+            df = pd.read_excel(uploaded_file_url)
+            
+            price_dis = df[df['变量名称'] == 'price_dis'].values[0][3:]
+            price_chr = df[df['变量名称'] == 'price_chr'].values[0][3:]
+            price_pv = df[df['变量名称'] == 'price_pv'].values[0][3:]
+            P_load = df[df['变量名称'] == 'P_load'].values[0][3:]
+            yita = df[df['变量名称'] == 'yita'].values[0][3]
+            P_PV = df[df['变量名称'] == 'P_PV'].values[0][3]
+            P_dis_max = df[df['变量名称'] == 'P_dis_max'].values[0][3]
+            P_chr_max = df[df['变量名称'] == 'P_chr_max'].values[0][3]
+            S = df[df['变量名称'] == 'S'].values[0][3]
+            S_0 = S * 0.3
+            S_max = S * 0.9
+            S_min = S * 0.2
+
+            P_dis, P_chr, P_pv, price, profit_pv, profit_es = data_process(price_dis, price_chr, price_pv, P_PV, P_load, P_dis_max, P_chr_max, S, S_0, S_max, S_min, yita)
+
+            new_df = pd.DataFrame({
+                'P_dis': P_dis,
+                'P_chr': price_chr,
+                'P_pv': P_pv,
+                'price': price,
+                'profit_pv': profit_pv,
+                'profit_es': profit_es
+            })
+
+            saved_filename = 'processed_' + filename
+            saved_file_url = '/home/ecs-user/changsha' + fs.url(saved_filename)
+            new_df.to_excel(saved_file_url, index=False)
+
+            Data.objects.create(username=form.cleaned_data['username'], file=saved_file_url)
+
+            # 返回文件 URL
+            return JsonResponse({
+                'result': 'success',
+            })
+        else:
+            # 如果表单验证失败，返回错误信息
+            return JsonResponse({
+                'result': 'failed',
+                'error': form.errors,
+            })
+    else:
+        return JsonResponse({
+            'result': '请求方法错误'
+        })
+
+def data_getinfos_by_username(request):
+    if request.method == 'POST':
+        user = request.user
+        # 若用户还未认证，显示登录注册页面
+        # if not user.is_authenticated:
+        #     return JsonResponse({
+        #         'result': 'failed',
+        #         'msg': '用户未通过身份验证',
+        #     })
+
+        data = request.POST
+        username = data.get('username', "").strip()
+        
+        # 取出认证请求信息，返回
+        records  = Data.objects.filter(username=username).order_by('-id')
+        if records.exists():
+            fileUrl = records[0].file
+            df = pd.read_excel(fileUrl)
+            
+            P_dis = df['P_dis'].values.tolist()
+            P_chr = df['P_chr'].values.tolist()
+            P_pv = df['P_pv'].values.tolist()
+            price = df['price'].values.tolist()
+            profit_pv = df['profit_pv'].values.tolist()
+            profit_es = df['profit_es'].values.tolist()
+
+            return JsonResponse({
+                'result': 'success',
+                'P_dis': P_dis,
+                'P_chr': P_chr,
+                'P_pv': P_pv,
+                'price': price,
+                'profit_pv': profit_pv,
+                'profit_es': profit_es
+            })
+        else:
+            return JsonResponse({
+                'result': '未上传数据',
             })
     else:
         return JsonResponse({

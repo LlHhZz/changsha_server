@@ -64,3 +64,9 @@ class AuthenticationExtractionStatus(models.Model):
     # 提取状态：待提取 已提取（约束：只允许根据用户名提取一次）
     # 再重新通过用户名和认证材料申报后，重新发放认证码后，允许再次提取新的认证码
     extractionStatus = models.CharField(max_length=255)
+
+class Data(models.Model):
+    # 上传数据的用户名
+    username = models.CharField(max_length=255)
+    # 数据处理完成后保存的路径
+    file = models.URLField(max_length=255, blank=True)
